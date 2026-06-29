@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>たいこのれんしゅう（カウントダウン版）</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        /* タイトル・難易度画面の共通スタイル */
+        .screen-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        .menu-title {
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px #ff3300;
+        }
+        .menu-subtitle {
+            font-size: 24px;
+            margin-bottom: 25px;
+            color: #fff;
+        }
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .diff-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 400px;
+            width: 100%;
+        }
+        @media (max-width: 480px) {
+            .menu-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .menu-btn {
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .menu-btn:active {
+            transform: scale(0.95);
+        }
+        .btn-p1 { background-color: #e63946; }
+        .btn-p2 { background-color: #457b9d; }
+        .btn-p3 { background-color: #2a9d8f; }
+        .btn-p4 { background-color: #f4a261; }
+        .btn-all { background-color: #8338ec; grid-column: span 2; }
+        .btn-rec { background-color: #ff0054; grid-column: span 2; }
+        @media (max-width: 480px) {
+            .btn-all, .btn-rec { grid-column: span 1; }
+        }
+
+        /* 難易度ボタンの色 */
+        .btn-easy { background-color: #2a9d8f; }
+        .btn-normal { background-color: #f4a261; }
+        .btn-oni { background-color: #d90429; }
+
+        /* ゲーム画面のスタイル */
+        #gameScreen {
+            display: none;
+            padding-top: 10px;
+        }
+        #gameCanvas {
+            background: #111;
+            display: block;
+            margin: 15px auto;
+            border: 2px solid #fff;
+            max-width: 100%;
+        }
+        .hud-container {
+            display: flex;
+            justify-content: space-around;
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .hud-score { color: #ffcc00; }
+        .hud-combo { color: #00ffcc; }
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            margin-top: 15px;
+        }
+        .drum-btn {
+            border-radius: 50%;
+            border: none;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #btn-don { 
+            background-color: #ff4d4d; 
+            width: 140px;
+            height: 140px;
+            font-size: 32px;
+        }
+        .btn-ka-side { 
+            background-color: #3399ff; 
+            width: 85px;
+            height: 85px;
+            font-size: 20px;
+        }
+        #output-area {
+            margin: 15px auto;
+            width: 80%;
+            max-width: 600px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #222;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #555;
+            box-sizing: border-box;
+        }
+        .control-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        /* リザルト画面のスタイル */
+        #resultScreen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        .result-box {
+            background-color: #111;
+            border: 3px solid #ffcc00;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .result-rank {
+            font-size: 32px;
+            color: #ff0054;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .result-score {
+            font-size: 40px;
+            color: #ffcc00;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .result-details {
+            font-size: 18px;
+            text-align: left;
+            margin: 0 auto 25px auto;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="titleScreen" class="screen-container">
+        <div class="menu-title">たいこのれんしゅう</div>
+        <div class="menu-container">
+            <button class="menu-btn btn-p1" onclick="selectPart('p1')">パート 1</button>
+            <button class="menu-btn btn-p2" onclick="selectPart('p2')">パート 2</button>
+            <button class="menu-btn btn-p3" onclick="selectPart('p3')">パート 3</button>
+            <button class="menu-btn btn-p4" onclick="selectPart('p4')">パート 4</button>
+            <button class="menu-btn btn-all" onclick="selectPart('all')">ぜんぶ通し練習</button>
+            <button class="menu-btn btn-rec" onclick="selectPart('rec')">🔴 記録モード</button>
+        </div>
+    </div>
+
+    <div id="difficultyScreen" class="screen-container" style="display: none;">
+        <div class="menu-title">むずかしさをえらぶ</div>
+        <div id="selected-part-name" class="menu-subtitle">選択中のパート</div>
+        <div class="diff-container">
+            <button class="menu-btn btn-easy" onclick="selectDifficulty('easy')">かんたん (ゆっくり)</button>
+            <button class="menu-btn btn-normal" onclick="selectDifficulty('normal')">ふつう</button>
+            <button class="menu-btn btn-oni" onclick="selectDifficulty('oni')">おに (超絶はやい！)</button>
+            <button class="menu-btn" style="background-color: #555; margin-top: 10px;" onclick="backToPartSelect()">パートをえらびなおす</button>
+        </div>
+    </div>
+
+    <div id="gameScreen">
+        <h1 id="playing-title">たいこのれんしゅう</h1>
+        
+        <div class="hud-container">
+            <div class="hud-score">スコア: <span id="live-score">0</span></div>
+            <div class="hud-combo"><span id="live-combo">0</span> コンボ</div>
+        </div>
+
+        <p id="mode-instruction">【通常モード】F:ドン / J:カッ</p>
+
+        <div>
+            <button class="control-btn" style="background-color: #555;" onclick="backToTitle()">タイトルにもどる</button>
+            <button class="control-btn" id="reset-rec-btn" style="background-color: #f44336; display: none;" onclick="clearRecordedNotes()">記録をリセット</button>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="280"></canvas>
+
+        <div class="btn-container">
+            <button id="btn-ka-left" class="drum-btn btn-ka-side">カ</button>
+            <button id="btn-don" class="drum-btn">ドン</button>
+            <button id="btn-ka-right" class="drum-btn btn-ka-side">カ</button>
+        </div>
+
+        <div id="output-area" style="display: none;">
+            <h3>自動生成された譜面コード</h3>
+            <textarea id="output-code" readonly placeholder="キーを叩くと、ここにコードがリアルタイムで作成されます。"></textarea>
+        </div>
+    </div>
+
+    <div id="resultScreen">
+        <div class="result-box">
+            <h2>✨ けっかはっぴょう ✨</h2>
+            <div id="res-part-name" style="font-size: 20px; color: #aaa;"></div>
+            <div id="res-rank" class="result-rank">お囃子の達人</div>
+            <div id="res-score" class="result-score">0 点</div>
+            
+            <div class="result-details">
+                <div class="details-row"><span style="color: #ffcc00;">PERFECT!!</span> <span id="res-perfect">0</span></div>
+                <div class="details-row"><span style="color: #ff66cc;">GOOD!</span> <span id="res-good">0</span></div>
+                <div class="details-row"><span style="color: #33ccff;">BAD</span> <span id="res-bad">0</span></div>
+                <div class="details-row"><span style="color: #aaaaaa;">するー(BAD)</span> <span id="res-miss">0</span></div>
+                <hr style="border-color: #444;">
+                <div class="details-row"><span style="color: #00ffcc;">さいだいコンボ</span> <span id="res-maxcombo">0</span></div>
+                <div class="details-row"><span style="color: #fff;">たたいた回数</span> <span id="res-hitcount">0</span></div>
+            </div>
+
+            <button class="menu-btn btn-p1" style="width: 100%; margin-bottom: 15px; padding: 12px;" onclick="retryGame()">もういちど遊ぶ</button>
+            <button class="menu-btn" style="width: 100%; background-color: #555; padding: 12px;" onclick="backToTitleFromResult()">メニューへもどる</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playTaikoSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            if (type === 1) {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } else {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+            }
+        }
+
+        const judgeX = 150;
+        const judgeY = 160; 
+        const radius = 30;
+        
+        let noteSpeed = 4;
+
+        let isRecordMode = false;
+        let timelineCounter = 800; 
+        let isTransitioning = false;
+        let currentPart = "p1"; 
+        let currentDifficulty = "normal";
+        let gameActive = false;
+        let animationFrameId = null; // ループ重複フリーズ防止用のID管理
+
+        // 判定テキスト描画システム用のグローバル変数宣言（★修正箇所：不足していた宣言を追加）
+        let recordedNotes = [];
+        let judgeText = "";
+        let judgeColor = "#fff";
+        let judgeTimer = 0;
+
+        // カウントダウン制御用の変数
+        let countdownValue = 3;
+        let isCountingDown = false;
+
+        // スコア・カウンター用の変数
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let countPerfect = 0;
+        let countGood = 0;
+        let countBad = 0;
+        let countMiss = 0;
+        let totalHitCount = 0;
+        let totalNotesInPart = 0;
+
+        const modeNames = { p1: "パート 1", p2: "パート 2", p3: "パート 3", p4: "パート 4", all: "ぜんぶ通し練習", rec: "🔴 記録モード" };
+        const diffNames = { easy: "かんたん", normal: "ふつう", oni: "おに" };
+
+        // 各パートの譜面データ定義
+const songData = {
+            p1: [
+                { x: 1720, type: 2, text: "カッ" },
+                { x: 2210, type: 2, text: "カッ" },
+                { x: 2750, type: 1, text: "トン" },
+                { x: 3260, type: 1, text: "トン" },
+                { x: 3800, type: 1, text: "ト" },
+                { x: 4040, type: 1, text: "コ" },
+                { x: 4290, type: 1, text: "ト" },
+                { x: 4540, type: 1, text: "コ" },
+                { x: 4800, type: 1, text: "ト" },
+                { x: 5080, type: 1, text: "コ" },
+                { x: 5340, type: 1, text: "ト" },
+                { x: 5580, type: 1, text: "コ" },
+                { x: 6850, type: 1, text: "トー" },
+                { x: 7360, type: 1, text: "テー" },
+                { x: 7860, type: 1, text: "トン" },
+                { x: 8920, type: 1, text: "トー" },
+                { x: 9400, type: 1, text: "テー" },
+                { x: 9920, type: 1, text: "トン" },
+                { x: 11000, type: 1, text: "トー" },
+                { x: 11470, type: 1, text: "テー" },
+                { x: 12000, type: 1, text: "トー" },
+                { x: 12500, type: 1, text: "テー" },
+                { x: 12980, type: 1, text: "トン" },
+                { x: 14030, type: 2, text: "カッ" },
+                { x: 15080, type: 1, text: "トー" },
+                { x: 15590, type: 1, text: "テー" },
+                { x: 16110, type: 1, text: "トン" },
+                { x: 17150, type: 1, text: "トー" },
+                { x: 17640, type: 1, text: "テー" },
+                { x: 18180, type: 1, text: "トン" },
+                { x: 19220, type: 1, text: "トー" },
+                { x: 19710, type: 1, text: "テー" },
+                { x: 20190, type: 1, text: "トー" },
+                { x: 20720, type: 1, text: "テー" },
+                { x: 21260, type: 1, text: "トン" },
+                { x: 22270, type: 2, text: "カッ" },
+                { x: 23300, type: 1, text: "トー" },
+                { x: 23790, type: 1, text: "テー" },
+                { x: 24290, type: 1, text: "トン" },
+                { x: 25340, type: 1, text: "トー" },
+                { x: 25890, type: 1, text: "テー" },
+                { x: 26410, type: 1, text: "トン" },
+                { x: 27420, type: 1, text: "トー" },
+                { x: 27940, type: 1, text: "テー" },
+                { x: 28410, type: 1, text: "トー" },
+                { x: 28960, type: 1, text: "テー" },
+                { x: 29480, type: 1, text: "トン" },
+                { x: 30540, type: 2, text: "カッ" },
+                { x: 31560, type: 1, text: "トー" },
+                { x: 32050, type: 1, text: "テー" },
+                { x: 32560, type: 1, text: "トー" },
+                { x: 33080, type: 1, text: "テー" },
+                { x: 33600, type: 1, text: "トン" },
+                { x: 34150, type: 2, text: "カ" },
+                { x: 34370, type: 2, text: "ラ" },
+                { x: 34630, type: 2, text: "カッ" },
+                { x: 35070, type: 2, text: "カッ" },
+                { x: 35650, type: 1, text: "トー" },
+                { x: 36150, type: 1, text: "テー" },
+                { x: 36700, type: 1, text: "トー" },
+                { x: 37220, type: 1, text: "テー" },
+                { x: 37690, type: 1, text: "トン" },
+                { x: 38240, type: 2, text: "カ" },
+                { x: 38470, type: 2, text: "ラ" },
+                { x: 38740, type: 2, text: "カッ" },
+                { x: 39260, type: 2, text: "カッ" },
+                { x: 39800, type: 1, text: "トー" },
+                { x: 40320, type: 1, text: "テー" },
+                { x: 40810, type: 1, text: "トー" },
+                { x: 41340, type: 1, text: "テー" },
+                { x: 41830, type: 1, text: "トン" },
+                { x: 42360, type: 2, text: "カ" },
+                { x: 42590, type: 2, text: "ラ" },
+                { x: 42830, type: 2, text: "カッ" },
+                { x: 43430, type: 2, text: "カッ" },
+                { x: 43880, type: 1, text: "トー" },
+                { x: 44390, type: 1, text: "テー" },
+                { x: 44890, type: 1, text: "トー" },
+                { x: 45420, type: 1, text: "テー" },
+                { x: 45920, type: 1, text: "トッ" },
+                { x: 46970, type: 1, text: "テン" },
+                { x: 48020, type: 1, text: "トン" },
+                { x: 48510, type: 1, text: "ト" },
+                { x: 48750, type: 1, text: "コ" },
+                { x: 49030, type: 1, text: "トン" },
+                { x: 49560, type: 1, text: "ト" },
+                { x: 49770, type: 1, text: "トコ" },
+                { x: 50040, type: 1, text: "トン" },
+                { x: 51110, type: 1, text: "トー" },
+                { x: 51610, type: 1, text: "テー" },
+                { x: 52100, type: 1, text: "トン" },
+                { x: 52660, type: 1, text: "ト" },
+                { x: 52860, type: 1, text: "コ" },
+                { x: 53140, type: 1, text: "トン" },
+                { x: 53670, type: 1, text: "ト" },
+                { x: 53940, type: 1, text: "コ" },
+                { x: 54170, type: 1, text: "トン" },
+                { x: 55180, type: 1, text: "トー" },
+                { x: 55710, type: 1, text: "テー" },
+                { x: 56210, type: 1, text: "トン" },
+                { x: 56730, type: 1, text: "ト" },
+                { x: 56970, type: 1, text: "コ" },
+                { x: 57240, type: 1, text: "トン" },
+                { x: 57780, type: 1, text: "ト" },
+                { x: 58020, type: 1, text: "コ" },
+                { x: 58340, type: 1, text: "トン" },
+                { x: 58790, type: 2, text: "カッ" },
+                { x: 59300, type: 1, text: "トン" },
+                { x: 59840, type: 1, text: "ト" },
+                { x: 60080, type: 1, text: "コ" },
+                { x: 60330, type: 1, text: "トン" },
+                { x: 60860, type: 1, text: "ト" },
+                { x: 61110, type: 1, text: "コ" },
+                { x: 61370, type: 1, text: "トン" },
+                { x: 61890, type: 1, text: "ト" },
+                { x: 62150, type: 1, text: "コ" },
+                { x: 62360, type: 1, text: "トン" },
+                { x: 63430, type: 1, text: "トン" },
+                { x: 63950, type: 1, text: "ト" },
+                { x: 64180, type: 1, text: "コ" },
+                { x: 64440, type: 1, text: "トン" },
+                { x: 64960, type: 1, text: "ト" },
+                { x: 65210, type: 1, text: "コ" },
+                { x: 65460, type: 1, text: "トン" },
+                { x: 66020, type: 1, text: "ト" },
+                { x: 66230, type: 1, text: "コ" },
+                { x: 66520, type: 1, text: "トン" },
+                { x: 67550, type: 1, text: "トン" },
+                { x: 68080, type: 1, text: "ト" },
+                { x: 68290, type: 1, text: "コ" },
+                { x: 68550, type: 1, text: "トン" },
+                { x: 69080, type: 1, text: "ト" },
+                { x: 69320, type: 1, text: "コ" },
+                { x: 69590, type: 1, text: "トン" },
+                { x: 70130, type: 1, text: "ト" },
+                { x: 70380, type: 1, text: "コ" },
+                { x: 70610, type: 1, text: "トン" },
+                { x: 71130, type: 2, text: "カッ" }
+            ],
+            p2: [
+                { x: 1200, type: 1, text: "ドン" }, { x: 1400, type: 1, text: "ドン" }, { x: 1600, type: 2, text: "カッ" }, { x: 1800, type: 2, text: "カッ" },
+                { x: 2000, type: 1, text: "ト" }, { x: 2100, type: 1, text: "コ" }, { x: 2200, type: 1, text: "トン" }
+            ],
+            p3: [
+                { x: 1200, type: 1, text: "ト" }, { x: 1300, type: 1, text: "ン" }, { x: 1500, type: 2, text: "カ" }, { x: 1600, type: 2, text: "ラ" },
+                { x: 1800, type: 1, text: "どん" }, { x: 2000, type: 1, text: "どん" }
+            ],
+            p4: [
+                { x: 1200, type: 2, text: "カッ" }, { x: 1400, type: 1, text: "ドン" }, { x: 1600, type: 2, text: "カッ" }, { x: 1800, type: 1, text: "ドン" },
+                { x: 2000, type: 1, text: "トー" }, { x: 2200, type: 1, text: "テー" }, { x: 2400, type: 1, text: "トン" }
+            ]
+        };
+
+        function selectPart(part) {
+            initAudio(); 
+            currentPart = part;
+            
+            if (part === 'rec') {
+                currentDifficulty = "normal";
+                noteSpeed = 10;
+                // タイトル画面を非表示にしてゲーム画面を表示する処理を追加（★修正箇所：切り替え不具合の解消）
+                document.getElementById("titleScreen").style.display = "none";
+                startGame();
+            } else {
+                document.getElementById("titleScreen").style.display = "none";
+                document.getElementById("difficultyScreen").style.display = "flex";
+                document.getElementById("selected-part-name").innerText = "えらんだパート: " + modeNames[part];
+            }
+        }
+
+        function backToPartSelect() {
+            document.getElementById("difficultyScreen").style.display = "none";
+            document.getElementById("titleScreen").style.display = "flex";
+        }
+
+        function selectDifficulty(diff) {
+            currentDifficulty = diff;
+            
+            if (diff === 'easy') {
+                noteSpeed = 3; // ★調整：鬼の半分の速さ（音符が見やすくなります）
+            } else if (diff === 'oni') {
+                noteSpeed = 20; // ★鬼は基準なので20のまま
+            } else {
+                noteSpeed = 10; // ★調整：かんたんと鬼の中間の速さ
+            }
+
+            document.getElementById("difficultyScreen").style.display = "none";
+            startGame();
+        }
+
+        function startGame() {
+            // フリーズ対策：以前走っていたゲームループを完全に破棄して安全化
+            gameActive = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            document.getElementById("resultScreen").style.display = "none";
+            document.getElementById("gameScreen").style.display = "block";
+            
+            const titleEl = document.getElementById("playing-title");
+            const instructionEl = document.getElementById("mode-instruction");
+            const resetBtn = document.getElementById("reset-rec-btn");
+            const outputArea = document.getElementById("output-area");
+
+            if (currentPart === 'rec') {
+                isRecordMode = true;
+                isCountingDown = false;
+                titleEl.innerText = modeNames.rec;
+                instructionEl.innerHTML = "リズム通りに叩くと下にコードが自動で作られます";
+                resetBtn.style.backgroundColor = "#ff9800";
+                resetBtn.style.display = "inline-block";
+                outputArea.style.display = "block";
+                clearRecordedNotes();
+                
+                gameActive = true;
+                gameLoop();
+            } else {
+                isRecordMode = false;
+                titleEl.innerText = `${modeNames[currentPart]} 【${diffNames[currentDifficulty]}】`;
+                instructionEl.innerHTML = "F:ドン / J:カッ";
+                resetBtn.style.display = "none";
+                outputArea.style.display = "none";
+                
+                score = 0; combo = 0; maxCombo = 0;
+                countPerfect = 0; countGood = 0; countBad = 0; countMiss = 0;
+                totalHitCount = 0;
+                updateHud();
+                resetGamePlay();
+                
+                // カウントダウン演出を起動
+                startCountdown();
+            }
+        }
+
+        // カウントダウン処理の実装
+        function startCountdown() {
+            isCountingDown = true;
+            countdownValue = 3;
+            setJudge("3", "#ffcc00");
+            playTaikoSound(2);
+
+            // ★修正：BPM 70 のリズム（1拍あたり約857ミリ秒）に設定
+            let timerId = setInterval(() => {
+                countdownValue--;
+                if (countdownValue === 2) {
+                    setJudge("2", "#ffcc00");
+                    playTaikoSound(2);
+                } else if (countdownValue === 1) {
+                    setJudge("1", "#ffcc00");
+                    playTaikoSound(2);
+                } else if (countdownValue === 0) {
+                    setJudge("スタート！", "#00ffcc");
+                    playTaikoSound(1);
+                    clearInterval(timerId);
+                    isCountingDown = false; // スクロールロック解除
+                }
+            }, 60000 / 70); // 60000ms ÷ 70 = 約857.14ms
+
+            gameActive = true;
+            gameLoop();
+        }
+
+        // カウントダウン中（およそ50フレーム強）に文字が消えないようタイマーを調整
+        function setJudge(text, color) {
+            judgeText = text; judgeColor = color; judgeTimer = isCountingDown ? 50 : 30;
+        }
+
+        function backToTitle() {
+            gameActive = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            document.getElementById("gameScreen").style.display = "none";
+            document.getElementById("titleScreen").style.display = "flex";
+            clearRecordedNotes();
+            notes = [];
+            isTransitioning = false;
+            isCountingDown = false;
+        }
+
+        function backToTitleFromResult() {
+            document.getElementById("resultScreen").style.display = "none";
+            document.getElementById("titleScreen").style.display = "flex";
+        }
+
+        function retryGame() {
+            startGame();
+        }
+
+        function getRawNotesForCurrentPart() {
+            if (currentPart === 'all') {
+                let combined = [];
+                let currentOffset = 0;
+                const parts = ['p1', 'p2', 'p3', 'p4'];
+                
+                parts.forEach(p => {
+                    if (songData[p] && songData[p].length > 0) {
+                        let base = songData[p][0].x;
+                        let maxOffset = 0;
+                        songData[p].forEach(n => {
+                            let relativeX = n.x - base;
+                            combined.push({
+                                x: relativeX + 1240 + currentOffset,
+                                type: n.type,
+                                text: n.text
+                            });
+                            if (relativeX > maxOffset) maxOffset = relativeX;
+                        });
+                        currentOffset += maxOffset + 600;
+                    }
+                });
+                return combined;
+            } else if (songData[currentPart]) {
+                return songData[currentPart];
+            }
+            return [];
+        }
+
+        function resetGamePlay() {
+            const currentRaw = getRawNotesForCurrentPart();
+            totalNotesInPart = currentRaw.length;
+            isTransitioning = false;
+            
+            if (currentRaw.length > 0) {
+                const firstRawX = currentRaw[0].x;
+                notes = currentRaw.map(n => {
+                    let relativeDistFromStart = n.x - firstRawX;
+                    
+                    // ★修正：配置間隔を「鬼（スピード20）」の基準に完全固定します
+                    // これにより、かんたん・ふつうを選んでもリズム（BPM）が鬼と全く同じになります
+                    let adjustedX = judgeX + 650 + (relativeDistFromStart * (noteSpeed / 20));
+                    
+                    return { 
+                        x: adjustedX, 
+                        type: n.type, 
+                        text: n.text || "" 
+                    };
+                });
+            } else {
+                notes = [];
+            }
+        }
+
+        function updateHud() {
+            document.getElementById("live-score").innerText = score.toLocaleString();
+            document.getElementById("live-combo").innerText = combo;
+        }
+
+        function showResultScreen() {
+            gameActive = false;
+            document.getElementById("gameScreen").style.display = "none";
+            document.getElementById("resultScreen").style.display = "flex";
+
+            document.getElementById("res-part-name").innerText = `${modeNames[currentPart]} （${diffNames[currentDifficulty]}）`;
+            document.getElementById("res-score").innerText = score.toLocaleString() + " 点";
+            document.getElementById("res-perfect").innerText = countPerfect;
+            document.getElementById("res-good").innerText = countGood;
+            document.getElementById("res-bad").innerText = countBad;
+            document.getElementById("res-miss").innerText = countMiss;
+            document.getElementById("res-maxcombo").innerText = maxCombo;
+            document.getElementById("res-hitcount").innerText = totalHitCount;
+
+            const rankEl = document.getElementById("res-rank");
+            const totalValidHits = countPerfect + countGood;
+            
+            if (totalNotesInPart > 0) {
+                const clearRate = totalValidHits / totalNotesInPart;
+                if (clearRate === 1.0) {
+                    rankEl.innerText = "✨神（フルコンボ！）✨";
+                    rankEl.style.color = "#ffcc00";
+                } else if (clearRate >= 0.9) {
+                    rankEl.innerText = "お囃子の達人 👑";
+                    rankEl.style.color = "#ff0054";
+                } else if (clearRate >= 0.7) {
+                    rankEl.innerText = "お囃子の一人前 🌸";
+                    rankEl.style.color = "#00ffcc";
+                } else {
+                    rankEl.innerText = "お囃子の見習い 🥚";
+                    rankEl.style.color = "#aaaaaa";
+                }
+            } else {
+                rankEl.innerText = "-";
+            }
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            ctx.fillStyle = "#111";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 判定枠の描画
+            ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4; ctx.beginPath();
+            ctx.arc(judgeX, judgeY, radius, 0, Math.PI * 2); ctx.stroke();
+
+            if (isRecordMode) {
+                timelineCounter += noteSpeed;
+                for (let rn of recordedNotes) {
+                    let currentX = rn.x - (timelineCounter - 800);
+                    if (currentX > -50 && currentX < 9999) { 
+                        ctx.beginPath();
+                        ctx.arc(currentX, judgeY, radius, 0, Math.PI * 2);
+                        ctx.fillStyle = rn.type === 1 ? "#ff4d4d" : "#3399ff";
+                        ctx.fill();
+
+                        // 記録モード時の音符上に読み仮名を表示（★修正箇所：ご要望機能の実装）
+                        if (rn.text) {
+                            ctx.font = "bold 20px sans-serif";
+                            ctx.fillStyle = "#ffffff";
+                            ctx.textAlign = "center";
+                            ctx.fillText(rn.text, currentX, judgeY - 45);
+                        }
+                    }
+                }
+            } else {
+                // 音符の移動と描画処理 (カウントダウン中は座標移動を一時ロックする)
+                for (let i = 0; i < notes.length; i++) {
+                    if (!isCountingDown) {
+                        notes[i].x -= noteSpeed;
+                    }
+                    
+                    if (notes[i].x < judgeX - 60) {
+                        setJudge("BAD...", "#aaaaaa");
+                        countMiss++;
+                        combo = 0;
+                        updateHud();
+                        notes.splice(i, 1); i--; continue;
+                    }
+                    if (notes[i].x > -50) {
+                        ctx.beginPath();
+                        ctx.arc(notes[i].x, judgeY, radius, 0, Math.PI * 2);
+                        ctx.fillStyle = notes[i].type === 1 ? "#ff4d4d" : "#3399ff";
+                        ctx.fill();
+
+                        if (notes[i].text) {
+                            ctx.font = "bold 20px sans-serif";
+                            ctx.fillStyle = "#ffffff";
+                            ctx.textAlign = "center";
+                            ctx.fillText(notes[i].text, notes[i].x, judgeY - 45);
+                        }
+                    }
+                }
+
+                // 全音符終了時の処理（カウントダウン中は終了判定を行わない）
+                if (notes.length === 0 && !isCountingDown && !isTransitioning) {
+                    isTransitioning = true;
+                    setTimeout(() => {
+                        showResultScreen();
+                    }, 2000);
+                }
+            }
+
+            // 判定テキスト・カウントダウン文字の描画
+            if (judgeTimer > 0) {
+                // カウントダウン中は数字をさらに超特大サイズにする
+                if (isCountingDown) {
+                    ctx.font = "bold 70px sans-serif";
+                    ctx.fillStyle = judgeColor; ctx.textAlign = "center";
+                    ctx.fillText(judgeText, canvas.width / 2, canvas.height / 2 + 20); 
+                } else {
+                    ctx.font = "bold 32px sans-serif"; ctx.fillStyle = judgeColor; ctx.textAlign = "center";
+                    ctx.fillText(judgeText, canvas.width / 2, 60); 
+                }
+                judgeTimer--;
+            }
+            
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function setJudge(text, color) {
+            judgeText = text; judgeColor = color; judgeTimer = isCountingDown ? 60 : 30;
+        }
+
+        function clearRecordedNotes() {
+            recordedNotes = [];
+            timelineCounter = 800;
+            document.getElementById("output-code").value = "";
+            setJudge("RESET", "#fff");
+        }
+
+        function handleComboBonus(basePoints) {
+            combo++;
+            if (combo > maxCombo) maxCombo = combo;
+            score += basePoints + (combo * 10);
+            updateHud();
+        }
+
+        function hitDrum(type) {
+            if (!gameActive || isCountingDown) return; // カウントダウン中の不正打鍵をガード
+            playTaikoSound(type);
+            totalHitCount++;
+
+            if (isRecordMode) {
+                // タイプに応じて読み仮名を割り当て（★修正箇所：ご要望機能の実装）
+                const noteText = type === 1 ? "トン" : "カッ";
+                recordedNotes.push({ x: timelineCounter, type: type, text: noteText });
+                updateOutputCode();
+                setJudge(type === 1 ? "ドン(記録)" : "カッ(記録)", "#0f0");
+            } else {
+                for (let i = 0; i < notes.length; i++) {
+                    if (notes[i].type === type) {
+                        const diff = Math.abs(notes[i].x - judgeX);
+                        const toleranceFactor = Math.max(1, noteSpeed / 4);
+                        if (diff <= 15 * toleranceFactor) { 
+                            setJudge("PERFECT!!", "#ffcc00"); 
+                            countPerfect++;
+                            handleComboBonus(1000);
+                            notes.splice(i, 1); break; 
+                        }
+                        else if (diff <= 40 * toleranceFactor) { 
+                            setJudge("GOOD!", "#ff66cc"); 
+                            countGood++;
+                            handleComboBonus(500);
+                            notes.splice(i, 1); break; 
+                        }
+                        else if (diff <= 60 * toleranceFactor) { 
+                            setJudge("BAD", "#33ccff"); 
+                            countBad++;
+                            combo = 0;
+                            updateHud();
+                            notes.splice(i, 1); break; 
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateOutputCode() {
+            // 生成されるコード文字列にtext属性を内包させる（★修正箇所：譜面データのコピペ用最適化）
+            let codeString = "[\n";
+            recordedNotes.forEach((n, idx) => {
+                codeString += `    { x: ${n.x}, type: ${n.type}, text: "${n.text}" }${idx < recordedNotes.length - 1 ? ',' : ''}\n`;
+            });
+            codeString += "]";
+            document.getElementById("output-code").value = codeString;
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "f" || e.key === "F") hitDrum(1);
+            if (e.key === "j" || e.key === "J") hitDrum(2);
+        });
+
+        document.getElementById("btn-don").addEventListener("touchstart", (e) => { e.preventDefault(); hitDrum(1); });
+        document.getElementById("btn-ka-left").addEventListener("touchstart", (e) => { e.preventDefault(); hitDrum(2); });
+        document.getElementById("btn-ka-right").addEventListener("touchstart", (e) => { e.preventDefault(); hitDrum(2); });
+        
+        document.getElementById("btn-don").addEventListener("mousedown", () => hitDrum(1));
+        document.getElementById("btn-ka-left").addEventListener("mousedown", () => hitDrum(2));
+        document.getElementById("btn-ka-right").addEventListener("mousedown", () => hitDrum(2));
+    </script>
+</body>
+</html>
