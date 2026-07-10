@@ -92,8 +92,8 @@
             margin: 15px auto;
             border: 2px solid #fff;
             max-width: 100%;
-            width: 95%;       /* ★追加：スマホの画面の横幅95%サイズに自動縮小します */
-            height: auto;     /* ★追加：横幅に合わせて高さも自動で綺麗に縮小します */
+            width: 95%;
+            height: auto;
         }
         .hud-container {
             display: flex;
@@ -229,7 +229,7 @@
     </div>
 
     <div id="gameScreen">
-        <h1 id="playing-title">たいこのれんしゅう</h1>
+        <h1 id="playing-title">たいコのれんしゅう</h1>
         
         <div class="hud-container">
             <div class="hud-score">スコア: <span id="live-score">0</span></div>
@@ -317,6 +317,13 @@
         const radius = 30;
         
         let noteSpeed = 4;
+        let targetBPM = 70;
+
+        const diffBPMs = {
+            easy: 70,
+            normal: 100,
+            oni: 120
+        };
 
         let isRecordMode = false;
         let timelineCounter = 800; 
@@ -324,19 +331,17 @@
         let currentPart = "p1"; 
         let currentDifficulty = "normal";
         let gameActive = false;
-        let animationFrameId = null; // ループ重複フリーズ防止用のID管理
+        let animationFrameId = null;
+        let recordMetronomeId = null; // 記録モード用メトロノームのタイマーID
 
-        // 判定テキスト描画システム用のグローバル変数宣言（★修正箇所：不足していた宣言を追加）
         let recordedNotes = [];
         let judgeText = "";
         let judgeColor = "#fff";
         let judgeTimer = 0;
 
-        // カウントダウン制御用の変数
         let countdownValue = 3;
         let isCountingDown = false;
 
-        // スコア・カウンター用の変数
         let score = 0;
         let combo = 0;
         let maxCombo = 0;
@@ -350,151 +355,156 @@
         const modeNames = { p1: "パート 1", p2: "パート 2", p3: "パート 3", p4: "パート 4", all: "ぜんぶ通し練習", rec: "🔴 記録モード" };
         const diffNames = { easy: "かんたん", normal: "ふつう", oni: "おに" };
 
-        // 各パートの譜面データ定義
-const songData = {
+        const partConfig = {
+            p1: { beatInterval: 500 }, 
+            p2: { beatInterval: 500 }, 
+            p3: { beatInterval: 500 },
+            p4: { beatInterval: 500 }
+        };
+
+        const songData = {
             p1: [
-                { x: 1720, type: 2, text: "カッ" },
-                { x: 2210, type: 2, text: "カッ" },
+                { x: 1700, type: 2, text: "カッ" },
+                { x: 2230, type: 2, text: "カッ" },
                 { x: 2750, type: 1, text: "トン" },
-                { x: 3260, type: 1, text: "トン" },
-                { x: 3800, type: 1, text: "ト" },
-                { x: 4040, type: 1, text: "コ" },
-                { x: 4290, type: 1, text: "ト" },
-                { x: 4540, type: 1, text: "コ" },
-                { x: 4800, type: 1, text: "ト" },
-                { x: 5080, type: 1, text: "コ" },
-                { x: 5340, type: 1, text: "ト" },
-                { x: 5580, type: 1, text: "コ" },
-                { x: 6850, type: 1, text: "トー" },
-                { x: 7360, type: 1, text: "テー" },
+                { x: 3210, type: 1, text: "トン" },
+                { x: 3750, type: 1, text: "ト" },
+                { x: 3990, type: 1, text: "コ" },
+                { x: 4280, type: 1, text: "ト" },
+                { x: 4520, type: 1, text: "コ" },
+                { x: 4780, type: 1, text: "ト" },
+                { x: 5040, type: 1, text: "コ" },
+                { x: 5280, type: 1, text: "ト" },
+                { x: 5570, type: 1, text: "コ" },
+                { x: 6890, type: 1, text: "トー" },
+                { x: 7340, type: 1, text: "テー" },
                 { x: 7860, type: 1, text: "トン" },
-                { x: 8920, type: 1, text: "トー" },
-                { x: 9400, type: 1, text: "テー" },
-                { x: 9920, type: 1, text: "トン" },
-                { x: 11000, type: 1, text: "トー" },
-                { x: 11470, type: 1, text: "テー" },
-                { x: 12000, type: 1, text: "トー" },
-                { x: 12500, type: 1, text: "テー" },
-                { x: 12980, type: 1, text: "トン" },
-                { x: 14030, type: 2, text: "カッ" },
-                { x: 15080, type: 1, text: "トー" },
-                { x: 15590, type: 1, text: "テー" },
-                { x: 16110, type: 1, text: "トン" },
-                { x: 17150, type: 1, text: "トー" },
-                { x: 17640, type: 1, text: "テー" },
-                { x: 18180, type: 1, text: "トン" },
-                { x: 19220, type: 1, text: "トー" },
-                { x: 19710, type: 1, text: "テー" },
-                { x: 20190, type: 1, text: "トー" },
-                { x: 20720, type: 1, text: "テー" },
-                { x: 21260, type: 1, text: "トン" },
-                { x: 22270, type: 2, text: "カッ" },
-                { x: 23300, type: 1, text: "トー" },
-                { x: 23790, type: 1, text: "テー" },
+                { x: 8880, type: 1, text: "トー" },
+                { x: 9370, type: 1, text: "テー" },
+                { x: 9870, type: 1, text: "トン" },
+                { x: 10940, type: 1, text: "トー" },
+                { x: 11430, type: 1, text: "テー" },
+                { x: 11920, type: 1, text: "トー" },
+                { x: 12420, type: 1, text: "テー" },
+                { x: 13010, type: 1, text: "トン" },
+                { x: 14050, type: 2, text: "カッ" },
+                { x: 15040, type: 1, text: "トー" },
+                { x: 15530, type: 1, text: "テー" },
+                { x: 16050, type: 1, text: "トン" },
+                { x: 17070, type: 1, text: "トー" },
+                { x: 17620, type: 1, text: "テー" },
+                { x: 18150, type: 1, text: "トン" },
+                { x: 19160, type: 1, text: "トー" },
+                { x: 19630, type: 1, text: "テー" },
+                { x: 20160, type: 1, text: "トー" },
+                { x: 20700, type: 1, text: "テー" },
+                { x: 21240, type: 1, text: "トン" },
+                { x: 22240, type: 2, text: "カッ" },
+                { x: 23290, type: 1, text: "トー" },
+                { x: 23810, type: 1, text: "テー" },
                 { x: 24290, type: 1, text: "トン" },
                 { x: 25340, type: 1, text: "トー" },
-                { x: 25890, type: 1, text: "テー" },
-                { x: 26410, type: 1, text: "トン" },
-                { x: 27420, type: 1, text: "トー" },
-                { x: 27940, type: 1, text: "テー" },
+                { x: 25820, type: 1, text: "テー" },
+                { x: 26370, type: 1, text: "トン" },
+                { x: 27410, type: 1, text: "トー" },
+                { x: 27900, type: 1, text: "テー" },
                 { x: 28410, type: 1, text: "トー" },
-                { x: 28960, type: 1, text: "テー" },
-                { x: 29480, type: 1, text: "トン" },
-                { x: 30540, type: 2, text: "カッ" },
-                { x: 31560, type: 1, text: "トー" },
-                { x: 32050, type: 1, text: "テー" },
-                { x: 32560, type: 1, text: "トー" },
-                { x: 33080, type: 1, text: "テー" },
-                { x: 33600, type: 1, text: "トン" },
-                { x: 34150, type: 2, text: "カ" },
-                { x: 34370, type: 2, text: "ラ" },
+                { x: 28910, type: 1, text: "テー" },
+                { x: 29440, type: 1, text: "トン" },
+                { x: 30500, type: 2, text: "カッ" },
+                { x: 31540, type: 1, text: "トー" },
+                { x: 32020, type: 1, text: "テー" },
+                { x: 32450, type: 1, text: "トー" },
+                { x: 33060, type: 1, text: "テー" },
+                { x: 33580, type: 1, text: "トン" },
+                { x: 34100, type: 2, text: "カ" },
+                { x: 34340, type: 2, text: "ラ" },
                 { x: 34630, type: 2, text: "カッ" },
-                { x: 35070, type: 2, text: "カッ" },
-                { x: 35650, type: 1, text: "トー" },
-                { x: 36150, type: 1, text: "テー" },
-                { x: 36700, type: 1, text: "トー" },
-                { x: 37220, type: 1, text: "テー" },
-                { x: 37690, type: 1, text: "トン" },
-                { x: 38240, type: 2, text: "カ" },
-                { x: 38470, type: 2, text: "ラ" },
-                { x: 38740, type: 2, text: "カッ" },
-                { x: 39260, type: 2, text: "カッ" },
-                { x: 39800, type: 1, text: "トー" },
-                { x: 40320, type: 1, text: "テー" },
-                { x: 40810, type: 1, text: "トー" },
-                { x: 41340, type: 1, text: "テー" },
-                { x: 41830, type: 1, text: "トン" },
-                { x: 42360, type: 2, text: "カ" },
-                { x: 42590, type: 2, text: "ラ" },
-                { x: 42830, type: 2, text: "カッ" },
-                { x: 43430, type: 2, text: "カッ" },
-                { x: 43880, type: 1, text: "トー" },
-                { x: 44390, type: 1, text: "テー" },
-                { x: 44890, type: 1, text: "トー" },
-                { x: 45420, type: 1, text: "テー" },
-                { x: 45920, type: 1, text: "トッ" },
-                { x: 46970, type: 1, text: "テン" },
-                { x: 48020, type: 1, text: "トン" },
-                { x: 48510, type: 1, text: "ト" },
-                { x: 48750, type: 1, text: "コ" },
-                { x: 49030, type: 1, text: "トン" },
-                { x: 49560, type: 1, text: "ト" },
-                { x: 49770, type: 1, text: "トコ" },
-                { x: 50040, type: 1, text: "トン" },
-                { x: 51110, type: 1, text: "トー" },
-                { x: 51610, type: 1, text: "テー" },
-                { x: 52100, type: 1, text: "トン" },
-                { x: 52660, type: 1, text: "ト" },
-                { x: 52860, type: 1, text: "コ" },
+                { x: 35100, type: 2, text: "カッ" },
+                { x: 35640, type: 1, text: "トー" },
+                { x: 36140, type: 1, text: "テー" },
+                { x: 36650, type: 1, text: "トー" },
+                { x: 37130, type: 1, text: "テー" },
+                { x: 37660, type: 1, text: "トン" },
+                { x: 38190, type: 2, text: "カ" },
+                { x: 38430, type: 2, text: "ラ" },
+                { x: 38690, type: 2, text: "カッ" },
+                { x: 39170, type: 2, text: "カッ" },
+                { x: 39710, type: 1, text: "トー" },
+                { x: 40240, type: 1, text: "テー" },
+                { x: 40770, type: 1, text: "トー" },
+                { x: 41250, type: 1, text: "テー" },
+                { x: 41770, type: 1, text: "トン" },
+                { x: 42320, type: 2, text: "カ" },
+                { x: 42600, type: 2, text: "ラ" },
+                { x: 42840, type: 2, text: "カッ" },
+                { x: 43340, type: 2, text: "カッ" },
+                { x: 43840, type: 1, text: "トー" },
+                { x: 44340, type: 1, text: "テー" },
+                { x: 44880, type: 1, text: "トー" },
+                { x: 45370, type: 1, text: "テー" },
+                { x: 45900, type: 1, text: "トッ" },
+                { x: 46990, type: 1, text: "テン" },
+                { x: 48000, type: 1, text: "トン" },
+                { x: 48470, type: 1, text: "ト" },
+                { x: 48740, type: 1, text: "コ" },
+                { x: 49000, type: 1, text: "トン" },
+                { x: 49500, type: 1, text: "ト" },
+                { x: 49760, type: 1, text: "コ" },
+                { x: 50000, type: 1, text: "トン" },
+                { x: 51070, type: 1, text: "トー" },
+                { x: 51570, type: 1, text: "テー" },
+                { x: 52070, type: 1, text: "トン" },
+                { x: 52540, type: 1, text: "ト" },
+                { x: 52850, type: 1, text: "コ" },
                 { x: 53140, type: 1, text: "トン" },
-                { x: 53670, type: 1, text: "ト" },
-                { x: 53940, type: 1, text: "コ" },
-                { x: 54170, type: 1, text: "トン" },
-                { x: 55180, type: 1, text: "トー" },
-                { x: 55710, type: 1, text: "テー" },
-                { x: 56210, type: 1, text: "トン" },
-                { x: 56730, type: 1, text: "ト" },
-                { x: 56970, type: 1, text: "コ" },
-                { x: 57240, type: 1, text: "トン" },
-                { x: 57780, type: 1, text: "ト" },
-                { x: 58020, type: 1, text: "コ" },
-                { x: 58340, type: 1, text: "トン" },
-                { x: 58790, type: 2, text: "カッ" },
-                { x: 59300, type: 1, text: "トン" },
-                { x: 59840, type: 1, text: "ト" },
-                { x: 60080, type: 1, text: "コ" },
+                { x: 53600, type: 1, text: "ト" },
+                { x: 53860, type: 1, text: "コ" },
+                { x: 54110, type: 1, text: "トン" },
+                { x: 55170, type: 1, text: "トー" },
+                { x: 55660, type: 1, text: "テー" },
+                { x: 56190, type: 1, text: "トン" },
+                { x: 56680, type: 1, text: "ト" },
+                { x: 56950, type: 1, text: "コ" },
+                { x: 57220, type: 1, text: "トン" },
+                { x: 57710, type: 1, text: "ト" },
+                { x: 57970, type: 1, text: "コ" },
+                { x: 58230, type: 1, text: "トン" },
+                { x: 58680, type: 2, text: "カッ" },
+                { x: 59280, type: 1, text: "トン" },
+                { x: 59790, type: 1, text: "ト" },
+                { x: 60040, type: 1, text: "コ" },
                 { x: 60330, type: 1, text: "トン" },
-                { x: 60860, type: 1, text: "ト" },
-                { x: 61110, type: 1, text: "コ" },
-                { x: 61370, type: 1, text: "トン" },
-                { x: 61890, type: 1, text: "ト" },
-                { x: 62150, type: 1, text: "コ" },
-                { x: 62360, type: 1, text: "トン" },
+                { x: 60820, type: 1, text: "ト" },
+                { x: 61090, type: 1, text: "コ" },
+                { x: 61340, type: 1, text: "トン" },
+                { x: 61840, type: 1, text: "ト" },
+                { x: 62080, type: 1, text: "コ" },
+                { x: 62340, type: 1, text: "トン" },
                 { x: 63430, type: 1, text: "トン" },
                 { x: 63950, type: 1, text: "ト" },
-                { x: 64180, type: 1, text: "コ" },
-                { x: 64440, type: 1, text: "トン" },
-                { x: 64960, type: 1, text: "ト" },
-                { x: 65210, type: 1, text: "コ" },
-                { x: 65460, type: 1, text: "トン" },
-                { x: 66020, type: 1, text: "ト" },
-                { x: 66230, type: 1, text: "コ" },
-                { x: 66520, type: 1, text: "トン" },
-                { x: 67550, type: 1, text: "トン" },
-                { x: 68080, type: 1, text: "ト" },
+                { x: 64160, type: 1, text: "コ" },
+                { x: 64410, type: 1, text: "トン" },
+                { x: 64900, type: 1, text: "ト" },
+                { x: 65170, type: 1, text: "コ" },
+                { x: 65430, type: 1, text: "トン" },
+                { x: 65940, type: 1, text: "ト" },
+                { x: 66190, type: 1, text: "コ" },
+                { x: 66460, type: 1, text: "トン" },
+                { x: 67530, type: 1, text: "トン" },
+                { x: 68050, type: 1, text: "ト" },
                 { x: 68290, type: 1, text: "コ" },
-                { x: 68550, type: 1, text: "トン" },
-                { x: 69080, type: 1, text: "ト" },
-                { x: 69320, type: 1, text: "コ" },
-                { x: 69590, type: 1, text: "トン" },
-                { x: 70130, type: 1, text: "ト" },
-                { x: 70380, type: 1, text: "コ" },
-                { x: 70610, type: 1, text: "トン" },
-                { x: 71130, type: 2, text: "カッ" }
+                { x: 68530, type: 1, text: "トン" },
+                { x: 69020, type: 1, text: "ト" },
+                { x: 69280, type: 1, text: "コ" },
+                { x: 69520, type: 1, text: "トン" },
+                { x: 70080, type: 1, text: "ト" },
+                { x: 70310, type: 1, text: "コ" },
+                { x: 70550, type: 1, text: "トン" },
+                { x: 71100, type: 2, text: "カッ" }
             ],
             p2: [
-                { x: 1200, type: 1, text: "ドン" }, { x: 1400, type: 1, text: "ドン" }, { x: 1600, type: 2, text: "カッ" }, { x: 1800, type: 2, text: "カッ" },
-                { x: 2000, type: 1, text: "ト" }, { x: 2100, type: 1, text: "コ" }, { x: 2200, type: 1, text: "トン" }
+                { x: 1830, type: 1, text: "トーン" }, { x: 2270, type: 1, text: "ト" }, { x: 2490, type: 1, text: "コ" }, { x: 2750, type: 1, text: "トーン" }, { x: 3280, type: 1, text: "ト" }, { x: 3520, type: 1, text: "トコ" }, { x: 3790, type: 1, text: "トーン" }, { x: 4330, type: 1, text: "ト" }, { x: 4570, type: 1, text: "コ" }, { x: 4830, type: 1, text: "トッ" }, { x: 5280, type: 1, text: "テン" }, { x: 5780, type: 1, text: "トーン" }, { x: 6360, type: 1, text: "ト" }, { x: 6630, type: 1, text: "コ" }, { x: 6870, type: 1, text: "トーン" }, { x: 7430, type: 1, text: "ト" }, { x: 7660, type: 1, text: "コ" }, { x: 7890, type: 1, text: "トーン" }, { x: 8410, type: 1, text: "ト" }, { x: 8690, type: 1, text: "コ" }, { x: 8920, type: 1, text: "トッ" }, { x: 9360, type: 1, text: "テン" }, { x: 9880, type: 1, text: "トーン" }, { x: 10480, type: 1, text: "ト" }, { x: 10740, type: 1, text: "コ" }, { x: 10970, type: 1, text: "トーン" }, { x: 11510, type: 1, text: "ト" }, { x: 11770, type: 1, text: "コ" }, { x: 12020, type: 1, text: "トーン" }, { x: 12540, type: 1, text: "ト" }, { x: 12790, type: 1, text: "コ" }, { x: 13070, type: 1, text: "トッ" }, { x: 13490, type: 1, text: "テン" }, { x: 14100, type: 1, text: "ト" }, { x: 14370, type: 1, text: "コ" }, { x: 14640, type: 1, text: "ト" }, { x: 14880, type: 1, text: "コ" }, { x: 15130, type: 1, text: "トッ" }, { x: 15620, type: 1, text: "テン" }, { x: 16160, type: 1, text: "トン" }, { x: 17180, type: 1, text: "トー" }, { x: 17660, type: 1, text: "コー" }, { x: 18190, type: 1, text: "トン" }, { x: 19250, type: 1, text: "トー" }, { x: 19690, type: 1, text: "コー" }, { x: 20250, type: 1, text: "トン" }, { x: 21240, type: 1, text: "トー" }, { x: 21760, type: 1, text: "コー" }, { x: 22300, type: 1, text: "トン" }, { x: 23320, type: 1, text: "トー" }, { x: 23830, type: 1, text: "コー" }, { x: 24330, type: 1, text: "トン" }, { x: 24880, type: 1, text: "ト" }, { x: 25120, type: 1, text: "コ" }, { x: 25390, type: 1, text: "トン" }, { x: 25910, type: 1, text: "ト" }, { x: 26170, type: 1, text: "コ" }, { x: 26420, type: 1, text: "トン" }, { x: 26930, type: 1, text: "ト" }, { x: 27190, type: 1, text: "コ" }, { x: 27440, type: 1, text: "トン" }, { x: 27950, type: 1, text: "ト" }, { x: 28220, type: 1, text: "コ" }, { x: 28450, type: 1, text: "トン" }, { x: 28950, type: 1, text: "チ" }, { x: 29230, type: 1, text: "キ" }, { x: 29480, type: 1, text: "チン" }, { x: 29980, type: 1, text: "チ" }, { x: 30220, type: 1, text: "キ" }, { x: 30500, type: 1, text: "トン" }, { x: 30980, type: 1, text: "チ" }, { x: 31250, type: 1, text: "キ" }, { x: 31490, type: 1, text: "チン" }, { x: 32010, type: 1, text: "チ" }, { x: 32270, type: 1, text: "キ" }, { x: 32510, type: 1, text: "トン" }, { x: 33010, type: 1, text: "チ" }, { x: 33280, type: 1, text: "キ" }, { x: 33550, type: 1, text: "トン" }, { x: 34040, type: 1, text: "チ" }, { x: 34350, type: 1, text: "キ" }, { x: 34580, type: 1, text: "トン" }, { x: 35090, type: 1, text: "チ" }, { x: 35340, type: 1, text: "キ" }, { x: 35610, type: 1, text: "トン" }, { x: 36080, type: 1, text: "チ" }, { x: 36410, type: 1, text: "キ" }, { x: 36630, type: 1, text: "スッ" }, { x: 37180, type: 1, text: "ト" }, { x: 37460, type: 1, text: "コ" }, { x: 37700, type: 1, text: "トン" }, { x: 38220, type: 2, text: "カ" }, { x: 38460, type: 2, text: "カ" }, { x: 38720, type: 1, text: "ト" }, { x: 39010, type: 1, text: "コ" }, { x: 39230, type: 1, text: "ト" }, { x: 39510, type: 1, text: "コ" }, { x: 39750, type: 1, text: "トン" }, { x: 40290, type: 2, text: "カ" }, { x: 40510, type: 2, text: "カ" }, { x: 40780, type: 1, text: "ト" }, { x: 41030, type: 1, text: "コ" }, { x: 41270, type: 1, text: "ト" }, { x: 41530, type: 1, text: "コ" }, { x: 41800, type: 1, text: "トン" }, { x: 42330, type: 1, text: "ト" }, { x: 42590, type: 1, text: "コ" }, { x: 42840, type: 1, text: "トン" }, { x: 43330, type: 1, text: "トン" }, { x: 43870, type: 1, text: "ト" }, { x: 44190, type: 1, text: "コ" }, { x: 44510, type: 1, text: "ト" }, { x: 44630, type: 1, text: "コ" }, { x: 44890, type: 1, text: "トン" }, { x: 45400, type: 1, text: "ト" }, { x: 45660, type: 1, text: "コ" }, { x: 45900, type: 1, text: "トン" }, { x: 46390, type: 1, text: "ト" }, { x: 46680, type: 1, text: "コ" }, { x: 46920, type: 1, text: "トン" }, { x: 47400, type: 1, text: "トン" }, { x: 47950, type: 1, text: "ト" }, { x: 48220, type: 1, text: "コ" }, { x: 48490, type: 1, text: "ト" }, { x: 48740, type: 1, text: "コ" }, { x: 49020, type: 1, text: "トン" }, { x: 49520, type: 1, text: "ト" }, { x: 49790, type: 1, text: "コ" }, { x: 50060, type: 1, text: "トン" }, { x: 50560, type: 1, text: "ト" }, { x: 50840, type: 1, text: "コ" }, { x: 51110, type: 1, text: "トン" }, { x: 51590, type: 1, text: "チ" }, { x: 51860, type: 1, text: "キ" }, { x: 52120, type: 1, text: "チン" }, { x: 52600, type: 1, text: "チ" }, { x: 52890, type: 1, text: "キ" }, { x: 53130, type: 1, text: "トン" }, { x: 53610, type: 1, text: "チ" }, { x: 53910, type: 1, text: "キ" }, { x: 54170, type: 1, text: "チン" }, { x: 54690, type: 1, text: "チ" }, { x: 54960, type: 1, text: "キ" }, { x: 55200, type: 1, text: "トン" }, { x: 55670, type: 1, text: "チ" }, { x: 55950, type: 1, text: "キ" }, { x: 56210, type: 1, text: "トン" }, { x: 56700, type: 1, text: "チ" }, { x: 56990, type: 1, text: "キ" }, { x: 57220, type: 1, text: "トン" }, { x: 57730, type: 1, text: "チ" }, { x: 58010, type: 1, text: "キ" }, { x: 58260, type: 1, text: "トン" }, { x: 58740, type: 1, text: "チ" }, { x: 59030, type: 1, text: "キ" }, { x: 59270, type: 1, text: "スッ" }, { x: 59800, type: 1, text: "ト" }, { x: 60080, type: 1, text: "コ" }, { x: 60360, type: 1, text: "トン" }, { x: 60920, type: 2, text: "カ" }, { x: 61160, type: 2, text: "カ" }, { x: 61430, type: 1, text: "ト" }, { x: 61670, type: 1, text: "コ" }, { x: 61920, type: 1, text: "ト" }, { x: 62160, type: 1, text: "コ" }, { x: 62430, type: 1, text: "トン" }, { x: 62940, type: 2, text: "カ" }, { x: 63180, type: 2, text: "カ" }, { x: 63440, type: 1, text: "ト" }, { x: 63680, type: 1, text: "コ" }, { x: 63950, type: 1, text: "ト" }, { x: 64210, type: 1, text: "コ" }, { x: 64460, type: 1, text: "トン" }, { x: 65000, type: 1, text: "ト" }, { x: 65230, type: 1, text: "コ" }, { x: 65470, type: 1, text: "トン" }, { x: 65960, type: 1, text: "トン" }, { x: 66490, type: 1, text: "ト" }, { x: 66750, type: 1, text: "コ" }, { x: 67020, type: 1, text: "ト" }, { x: 67290, type: 1, text: "コ" }, { x: 67530, type: 1, text: "トン" }, { x: 68020, type: 1, text: "ト" }, { x: 68280, type: 1, text: "コ" }, { x: 68510, type: 1, text: "トン" }, { x: 69030, type: 1, text: "ト" }, { x: 69290, type: 1, text: "コ" }, { x: 69560, type: 1, text: "トン" }, { x: 70050, type: 1, text: "トン" }, { x: 70590, type: 1, text: "ト" }, { x: 70870, type: 1, text: "コ" }, { x: 71120, type: 1, text: "ト" }, { x: 71420, type: 1, text: "コ" }, { x: 71680, type: 1, text: "トン" }, { x: 72180, type: 1, text: "ト" }, { x: 72430, type: 1, text: "コ" }, { x: 72680, type: 1, text: "トン" }, { x: 73200, type: 1, text: "ト" }, { x: 73450, type: 1, text: "コ" }, { x: 73690, type: 1, text: "トン" }, { x: 74210, type: 1, text: "チ" }, { x: 74470, type: 1, text: "キ" }, { x: 74740, type: 1, text: "チン" }, { x: 75240, type: 1, text: "チ" }, { x: 75520, type: 1, text: "キ" }, { x: 75780, type: 1, text: "トン" }, { x: 76270, type: 1, text: "チ" }, { x: 76520, type: 1, text: "キ" }, { x: 76790, type: 1, text: "チン" }, { x: 77320, type: 1, text: "チ" }, { x: 77570, type: 1, text: "キ" }, { x: 77820, type: 1, text: "トン" }, { x: 78300, type: 1, text: "チ" }, { x: 78570, type: 1, text: "キ" }, { x: 78830, type: 1, text: "トン" }, { x: 79320, type: 1, text: "チ" }, { x: 79560, type: 1, text: "キ" }, { x: 79840, type: 1, text: "トン" }, { x: 80380, type: 1, text: "チ" }, { x: 80620, type: 1, text: "キ" }, { x: 80890, type: 1, text: "トン" }, { x: 81400, type: 1, text: "チ" }, { x: 81670, type: 1, text: "キ" }, { x: 81890, type: 1, text: "スッ" }, { x: 82370, type: 1, text: "ト" }, { x: 82650, type: 1, text: "コ" }, { x: 82900, type: 1, text: "トン" }, { x: 83510, type: 2, text: "カ" }, { x: 83750, type: 2, text: "カ" }, { x: 84010, type: 1, text: "ト" }, { x: 84260, type: 1, text: "コ" }, { x: 84520, type: 1, text: "ト" }, { x: 84760, type: 1, text: "コ" }, { x: 85030, type: 1, text: "トン" }, { x: 85590, type: 2, text: "カ" }, { x: 85790, type: 2, text: "カ" }, { x: 86070, type: 1, text: "ト" }, { x: 86310, type: 1, text: "コ" }, { x: 86590, type: 1, text: "ト" }, { x: 86820, type: 1, text: "コ" }, { x: 87090, type: 1, text: "トッ" }, { x: 87600, type: 1, text: "テン" }, { x: 88110, type: 1, text: "トン" }, { x: 89110, type: 1, text: "トー" }, { x: 89600, type: 1, text: "コー" }, { x: 90140, type: 1, text: "トン" }, { x: 91170, type: 1, text: "トー" }, { x: 91650, type: 1, text: "コー" }, { x: 92170, type: 1, text: "トン" }, { x: 93240, type: 1, text: "トー" }, { x: 93700, type: 1, text: "コー" }, { x: 94230, type: 1, text: "トン" }, { x: 95340, type: 1, text: "トー" }, { x: 95800, type: 1, text: "コー" }, { x: 96320, type: 1, text: "トン" }, { x: 96740, type: 1, text: "ト" }, { x: 97050, type: 1, text: "コ" }, { x: 97310, type: 1, text: "トン" }, { x: 97880, type: 1, text: "ト" }, { x: 98150, type: 1, text: "コ" }, { x: 98400, type: 1, text: "トン" }, { x: 98880, type: 1, text: "ト" }, { x: 99160, type: 1, text: "コ" }, { x: 99400, type: 1, text: "トン" }, { x: 100420, type: 1, text: "トー" }, { x: 100910, type: 1, text: "コー" }, { x: 101440, type: 1, text: "トン" }, { x: 102530, type: 1, text: "トー" }, { x: 102970, type: 1, text: "コー" }, { x: 103490, type: 1, text: "トン" }, { x: 104540, type: 1, text: "トー" }, { x: 105030, type: 1, text: "コー" }, { x: 105520, type: 1, text: "トン" }, { x: 106590, type: 1, text: "トー" }, { x: 107110, type: 1, text: "コー" }, { x: 107630, type: 1, text: "トン" }, { x: 108150, type: 1, text: "ト" }, { x: 108390, type: 1, text: "コ" }, { x: 108650, type: 1, text: "トン" }, { x: 109210, type: 1, text: "ト" }, { x: 109450, type: 1, text: "コ" }, { x: 109700, type: 1, text: "トン" }, { x: 110240, type: 1, text: "ト" }, { x: 110480, type: 1, text: "コ" }, { x: 110720, type: 1, text: "トン" }, { x: 111220, type: 1, text: "ト" }, { x: 111490, type: 1, text: "コ" }, { x: 111730, type: 1, text: "トン" }, { x: 112240, type: 1, text: "チ" }, { x: 112510, type: 1, text: "キ" }, { x: 112740, type: 1, text: "チン" }, { x: 113270, type: 1, text: "チ" }, { x: 113500, type: 1, text: "キ" }, { x: 113760, type: 1, text: "トン" }, { x: 114270, type: 1, text: "チ" }, { x: 114520, type: 1, text: "キ" }, { x: 114760, type: 1, text: "チン" }, { x: 115280, type: 1, text: "チ" }, { x: 115540, type: 1, text: "キ" }, { x: 115790, type: 1, text: "トン" }, { x: 116340, type: 1, text: "チ" }, { x: 116600, type: 1, text: "キ" }, { x: 116820, type: 1, text: "トン" }, { x: 117380, type: 1, text: "チ" }, { x: 117650, type: 1, text: "キ" }, { x: 117890, type: 1, text: "トン" }, { x: 118410, type: 1, text: "チ" }, { x: 118700, type: 1, text: "キ" }, { x: 118960, type: 1, text: "トン" }, { x: 119460, type: 1, text: "チ" }, { x: 119730, type: 1, text: "キ" }, { x: 119980, type: 1, text: "スッ" }, { x: 120470, type: 1, text: "ト" }, { x: 120730, type: 1, text: "コ" }, { x: 120980, type: 1, text: "トン" }, { x: 121520, type: 2, text: "カ" }, { x: 121780, type: 2, text: "カ" }, { x: 122040, type: 1, text: "ト" }, { x: 122310, type: 1, text: "コ" }, { x: 122560, type: 1, text: "ト" }, { x: 122800, type: 1, text: "コ" }, { x: 123040, type: 1, text: "トン" }, { x: 123540, type: 2, text: "カ" }, { x: 123790, type: 2, text: "カ" }, { x: 124070, type: 1, text: "ト" }, { x: 124290, type: 1, text: "コ" }, { x: 124570, type: 1, text: "ト" }, { x: 124830, type: 1, text: "コ" }, { x: 125100, type: 1, text: "トン" }, { x: 125660, type: 1, text: "ト" }, { x: 125910, type: 1, text: "コ" }, { x: 126120, type: 1, text: "トン" }, { x: 126630, type: 1, text: "トン" }, { x: 127170, type: 1, text: "ト" }, { x: 127430, type: 1, text: "コ" }, { x: 127670, type: 1, text: "ト" }, { x: 127910, type: 1, text: "コ" }, { x: 128170, type: 1, text: "トン" }, { x: 128760, type: 1, text: "ト" }, { x: 128980, type: 1, text: "コ" }, { x: 129250, type: 1, text: "トン" }, { x: 129780, type: 1, text: "ト" }, { x: 130020, type: 1, text: "コ" }, { x: 130290, type: 1, text: "トン" }, { x: 130770, type: 1, text: "トン" }, { x: 131270, type: 1, text: "ト" }, { x: 131530, type: 1, text: "コ" }, { x: 131780, type: 1, text: "ト" }, { x: 132070, type: 1, text: "コ" }, { x: 132310, type: 1, text: "トン" }, { x: 132800, type: 1, text: "ト" }, { x: 133090, type: 1, text: "コ" }, { x: 133340, type: 1, text: "トン" }, { x: 133840, type: 1, text: "ト" }, { x: 134110, type: 1, text: "コ" }, { x: 134380, type: 1, text: "トン" }, { x: 134890, type: 1, text: "チ" }, { x: 135140, type: 1, text: "キ" }, { x: 135380, type: 1, text: "チン" }, { x: 135900, type: 1, text: "チ" }, { x: 136160, type: 1, text: "キ" }, { x: 136400, type: 1, text: "トン" }, { x: 136920, type: 1, text: "チ" }, { x: 137150, type: 1, text: "キ" }, { x: 137420, type: 1, text: "チン" }, { x: 137950, type: 1, text: "チ" }, { x: 138200, type: 1, text: "キ" }, { x: 138460, type: 1, text: "トン" }, { x: 138960, type: 1, text: "チ" }, { x: 139220, type: 1, text: "キ" }, { x: 139460, type: 1, text: "トン" }, { x: 140000, type: 1, text: "チ" }, { x: 140220, type: 1, text: "キ" }, { x: 140490, type: 1, text: "トン" }, { x: 141050, type: 1, text: "チ" }, { x: 141310, type: 1, text: "キ" }, { x: 141530, type: 1, text: "トン" }, { x: 142070, type: 1, text: "チ" }, { x: 142330, type: 1, text: "キ" }, { x: 142580, type: 1, text: "スッ" }, { x: 143120, type: 1, text: "ト" }, { x: 143360, type: 1, text: "コ" }, { x: 143610, type: 1, text: "トン" }, { x: 144140, type: 2, text: "カ" }, { x: 144360, type: 2, text: "カ" }, { x: 144640, type: 1, text: "ト" }, { x: 144900, type: 1, text: "コ" }, { x: 145160, type: 1, text: "ト" }, { x: 145420, type: 1, text: "コ" }, { x: 145640, type: 1, text: "トン" }, { x: 146190, type: 2, text: "カ" }, { x: 146410, type: 2, text: "カ" }, { x: 146670, type: 1, text: "ト" }, { x: 146950, type: 1, text: "コ" }, { x: 147210, type: 1, text: "ト" }, { x: 147470, type: 1, text: "コ" }, { x: 147710, type: 1, text: "トン" }, { x: 148260, type: 1, text: "ト" }, { x: 148490, type: 1, text: "コ" }, { x: 148770, type: 1, text: "トン" }, { x: 149290, type: 1, text: "トン" }, { x: 149770, type: 1, text: "ト" }, { x: 150110, type: 1, text: "コ" }, { x: 150340, type: 1, text: "ト" }, { x: 150570, type: 1, text: "コ" }, { x: 150830, type: 1, text: "トン" }, { x: 151350, type: 1, text: "ト" }, { x: 151580, type: 1, text: "コ" }, { x: 151840, type: 1, text: "トン" }, { x: 152380, type: 1, text: "ト" }, { x: 152630, type: 1, text: "コ" }, { x: 152870, type: 1, text: "トン" }, { x: 153410, type: 1, text: "トン" }, { x: 153930, type: 1, text: "ト" }, { x: 154180, type: 1, text: "コ" }, { x: 154420, type: 1, text: "ト" }, { x: 154690, type: 1, text: "コ" }, { x: 154950, type: 1, text: "トン" }, { x: 155480, type: 1, text: "ト" }, { x: 155730, type: 1, text: "コ" }, { x: 156030, type: 1, text: "トン" }, { x: 156490, type: 1, text: "ト" }, { x: 156750, type: 1, text: "コ" }, { x: 156990, type: 1, text: "トン" }, { x: 157530, type: 1, text: "チ" }, { x: 157760, type: 1, text: "キ" }, { x: 158020, type: 1, text: "チン" }, { x: 158510, type: 1, text: "チ" }, { x: 158760, type: 1, text: "キ" }, { x: 159030, type: 1, text: "トン" }, { x: 159540, type: 1, text: "チ" }, { x: 159830, type: 1, text: "キ" }, { x: 160050, type: 1, text: "チン" }, { x: 160580, type: 1, text: "チ" }, { x: 160820, type: 1, text: "キ" }, { x: 161080, type: 1, text: "トン" }, { x: 161580, type: 1, text: "チ" }, { x: 161820, type: 1, text: "キ" }, { x: 162100, type: 1, text: "トン" }, { x: 162620, type: 1, text: "チ" }, { x: 162860, type: 1, text: "キ" }, { x: 163120, type: 1, text: "トン" }, { x: 163660, type: 1, text: "チ" }, { x: 163940, type: 1, text: "キ" }, { x: 164170, type: 1, text: "トン" }, { x: 164700, type: 1, text: "チ" }, { x: 164950, type: 1, text: "キ" }, { x: 165190, type: 1, text: "スッ" }, { x: 165740, type: 1, text: "ト" }, { x: 166000, type: 1, text: "コ" }, { x: 166260, type: 1, text: "トン" }, { x: 166770, type: 2, text: "カ" }, { x: 166980, type: 2, text: "カ" }, { x: 167240, type: 1, text: "ト" }, { x: 167520, type: 1, text: "コ" }, { x: 167800, type: 1, text: "ト" }, { x: 168040, type: 1, text: "コ" }, { x: 168290, type: 1, text: "トン" }, { x: 168850, type: 2, text: "カ" }, { x: 169080, type: 2, text: "カ" }, { x: 169340, type: 1, text: "ト" }, { x: 169570, type: 1, text: "コ" }, { x: 169830, type: 1, text: "ト" }, { x: 170090, type: 1, text: "コ" }, { x: 170330, type: 1, text: "トー" }, { x: 171370, type: 1, text: "テー" }
             ],
             p3: [
                 { x: 1200, type: 1, text: "ト" }, { x: 1300, type: 1, text: "ン" }, { x: 1500, type: 2, text: "カ" }, { x: 1600, type: 2, text: "ラ" },
@@ -513,7 +523,7 @@ const songData = {
             if (part === 'rec') {
                 currentDifficulty = "normal";
                 noteSpeed = 10;
-                // タイトル画面を非表示にしてゲーム画面を表示する処理を追加（★修正箇所：切り替え不具合の解消）
+                targetBPM = 70; 
                 document.getElementById("titleScreen").style.display = "none";
                 startGame();
             } else {
@@ -530,13 +540,14 @@ const songData = {
 
         function selectDifficulty(diff) {
             currentDifficulty = diff;
+            targetBPM = diffBPMs[diff] || 100;
             
             if (diff === 'easy') {
-                noteSpeed = 3; // ★調整：鬼の半分の速さ（音符が見やすくなります）
+                noteSpeed = 6; 
             } else if (diff === 'oni') {
-                noteSpeed = 20; // ★鬼は基準なので20のまま
+                noteSpeed = 18; 
             } else {
-                noteSpeed = 10; // ★調整：かんたんと鬼の中間の速さ
+                noteSpeed = 12; 
             }
 
             document.getElementById("difficultyScreen").style.display = "none";
@@ -544,11 +555,14 @@ const songData = {
         }
 
         function startGame() {
-            // フリーズ対策：以前走っていたゲームループを完全に破棄して安全化
             gameActive = false;
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
+            }
+            if (recordMetronomeId) {
+                clearInterval(recordMetronomeId);
+                recordMetronomeId = null;
             }
 
             document.getElementById("resultScreen").style.display = "none";
@@ -569,6 +583,13 @@ const songData = {
                 outputArea.style.display = "block";
                 clearRecordedNotes();
                 
+                const intervalMs = 60000 / targetBPM; 
+                recordMetronomeId = setInterval(() => {
+                    if (gameActive && isRecordMode) {
+                        playTaikoSound(2); 
+                    }
+                }, intervalMs);
+
                 gameActive = true;
                 gameLoop();
             } else {
@@ -584,19 +605,16 @@ const songData = {
                 updateHud();
                 resetGamePlay();
                 
-                // カウントダウン演出を起動
                 startCountdown();
             }
         }
 
-        // カウントダウン処理の実装
         function startCountdown() {
             isCountingDown = true;
             countdownValue = 3;
             setJudge("3", "#ffcc00");
             playTaikoSound(2);
 
-            // ★修正：BPM 70 のリズム（1拍あたり約857ミリ秒）に設定
             let timerId = setInterval(() => {
                 countdownValue--;
                 if (countdownValue === 2) {
@@ -609,15 +627,14 @@ const songData = {
                     setJudge("スタート！", "#00ffcc");
                     playTaikoSound(1);
                     clearInterval(timerId);
-                    isCountingDown = false; // スクロールロック解除
+                    isCountingDown = false; 
                 }
-            }, 60000 / 70); // 60000ms ÷ 70 = 約857.14ms
+            }, 60000 / targetBPM); 
 
             gameActive = true;
             gameLoop();
         }
 
-        // カウントダウン中（およそ50フレーム強）に文字が消えないようタイマーを調整
         function setJudge(text, color) {
             judgeText = text; judgeColor = color; judgeTimer = isCountingDown ? 50 : 30;
         }
@@ -627,6 +644,10 @@ const songData = {
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
+            }
+            if (recordMetronomeId) {
+                clearInterval(recordMetronomeId);
+                recordMetronomeId = null;
             }
             document.getElementById("gameScreen").style.display = "none";
             document.getElementById("titleScreen").style.display = "flex";
@@ -655,12 +676,16 @@ const songData = {
                     if (songData[p] && songData[p].length > 0) {
                         let base = songData[p][0].x;
                         let maxOffset = 0;
+                        
+                        const scaleFactor = 500 / partConfig[p].beatInterval;
+
                         songData[p].forEach(n => {
-                            let relativeX = n.x - base;
+                            let relativeX = (n.x - base) * scaleFactor;
                             combined.push({
                                 x: relativeX + 1240 + currentOffset,
                                 type: n.type,
-                                text: n.text
+                                text: n.text,
+                                parentPart: p
                             });
                             if (relativeX > maxOffset) maxOffset = relativeX;
                         });
@@ -669,7 +694,7 @@ const songData = {
                 });
                 return combined;
             } else if (songData[currentPart]) {
-                return songData[currentPart];
+                return songData[currentPart].map(n => ({...n, parentPart: currentPart}));
             }
             return [];
         }
@@ -683,10 +708,13 @@ const songData = {
                 const firstRawX = currentRaw[0].x;
                 notes = currentRaw.map(n => {
                     let relativeDistFromStart = n.x - firstRawX;
+                    const partMeta = partConfig[n.parentPart] || { beatInterval: 500 };
                     
-                    // ★修正：配置間隔を「鬼（スピード20）」の基準に完全固定します
-                    // これにより、かんたん・ふつうを選んでもリズム（BPM）が鬼と全く同じになります
-                    let adjustedX = judgeX + 650 + (relativeDistFromStart * (noteSpeed / 20));
+                    const oneBeatMs = 60000 / targetBPM; 
+                    const framesPerBeat = (oneBeatMs / 1000) * 60; 
+                    
+                    let frameOffset = (relativeDistFromStart / partMeta.beatInterval) * framesPerBeat;
+                    let adjustedX = judgeX + 650 + (frameOffset * noteSpeed);
                     
                     return { 
                         x: adjustedX, 
@@ -727,13 +755,13 @@ const songData = {
                     rankEl.innerText = "✨神（フルコンボ！）✨";
                     rankEl.style.color = "#ffcc00";
                 } else if (clearRate >= 0.9) {
-                    rankEl.innerText = "お囃子の達人 👑";
+                    rankEl.innerText = "囃子の達人 👑";
                     rankEl.style.color = "#ff0054";
                 } else if (clearRate >= 0.7) {
-                    rankEl.innerText = "お囃子の一人前 🌸";
+                    rankEl.innerText = "囃子の一人前 🌸";
                     rankEl.style.color = "#00ffcc";
                 } else {
-                    rankEl.innerText = "お囃子の見習い 🥚";
+                    rankEl.innerText = "囃子の見習い 🥚";
                     rankEl.style.color = "#aaaaaa";
                 }
             } else {
@@ -747,7 +775,6 @@ const songData = {
             ctx.fillStyle = "#111";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 判定枠の描画
             ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4; ctx.beginPath();
             ctx.arc(judgeX, judgeY, radius, 0, Math.PI * 2); ctx.stroke();
 
@@ -761,7 +788,6 @@ const songData = {
                         ctx.fillStyle = rn.type === 1 ? "#ff4d4d" : "#3399ff";
                         ctx.fill();
 
-                        // 記録モード時の音符上に読み仮名を表示（★修正箇所：ご要望機能の実装）
                         if (rn.text) {
                             ctx.font = "bold 20px sans-serif";
                             ctx.fillStyle = "#ffffff";
@@ -771,7 +797,6 @@ const songData = {
                     }
                 }
             } else {
-                // 音符の移動と描画処理 (カウントダウン中は座標移動を一時ロックする)
                 for (let i = 0; i < notes.length; i++) {
                     if (!isCountingDown) {
                         notes[i].x -= noteSpeed;
@@ -799,7 +824,6 @@ const songData = {
                     }
                 }
 
-                // 全音符終了時の処理（カウントダウン中は終了判定を行わない）
                 if (notes.length === 0 && !isCountingDown && !isTransitioning) {
                     isTransitioning = true;
                     setTimeout(() => {
@@ -808,9 +832,7 @@ const songData = {
                 }
             }
 
-            // 判定テキスト・カウントダウン文字の描画
             if (judgeTimer > 0) {
-                // カウントダウン中は数字をさらに超特大サイズにする
                 if (isCountingDown) {
                     ctx.font = "bold 70px sans-serif";
                     ctx.fillStyle = judgeColor; ctx.textAlign = "center";
@@ -823,10 +845,6 @@ const songData = {
             }
             
             animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        function setJudge(text, color) {
-            judgeText = text; judgeColor = color; judgeTimer = isCountingDown ? 60 : 30;
         }
 
         function clearRecordedNotes() {
@@ -844,12 +862,11 @@ const songData = {
         }
 
         function hitDrum(type) {
-            if (!gameActive || isCountingDown) return; // カウントダウン中の不正打鍵をガード
+            if (!gameActive || isCountingDown) return; 
             playTaikoSound(type);
             totalHitCount++;
 
             if (isRecordMode) {
-                // タイプに応じて読み仮名を割り当て（★修正箇所：ご要望機能の実装）
                 const noteText = type === 1 ? "トン" : "カッ";
                 recordedNotes.push({ x: timelineCounter, type: type, text: noteText });
                 updateOutputCode();
@@ -858,20 +875,20 @@ const songData = {
                 for (let i = 0; i < notes.length; i++) {
                     if (notes[i].type === type) {
                         const diff = Math.abs(notes[i].x - judgeX);
-                        const toleranceFactor = Math.max(1, noteSpeed / 4);
-                        if (diff <= 15 * toleranceFactor) { 
+                        const toleranceFactor = Math.max(1, noteSpeed / 12);
+                        if (diff <= 20 * toleranceFactor) { 
                             setJudge("PERFECT!!", "#ffcc00"); 
                             countPerfect++;
                             handleComboBonus(1000);
                             notes.splice(i, 1); break; 
                         }
-                        else if (diff <= 40 * toleranceFactor) { 
+                        else if (diff <= 60 * toleranceFactor) { 
                             setJudge("GOOD!", "#ff66cc"); 
                             countGood++;
                             handleComboBonus(500);
                             notes.splice(i, 1); break; 
                         }
-                        else if (diff <= 60 * toleranceFactor) { 
+                        else if (diff <= 80 * toleranceFactor) { 
                             setJudge("BAD", "#33ccff"); 
                             countBad++;
                             combo = 0;
@@ -884,7 +901,6 @@ const songData = {
         }
 
         function updateOutputCode() {
-            // 生成されるコード文字列にtext属性を内包させる（★修正箇所：譜面データのコピペ用最適化）
             let codeString = "[\n";
             recordedNotes.forEach((n, idx) => {
                 codeString += `    { x: ${n.x}, type: ${n.type}, text: "${n.text}" }${idx < recordedNotes.length - 1 ? ',' : ''}\n`;
