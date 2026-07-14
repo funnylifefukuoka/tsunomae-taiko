@@ -368,31 +368,31 @@
     </div>
 
     <div id="scoreViewerScreen" class="screen-container">
-        <div class="menu-title">お囃子の楽譜一覧</div>
-        <div class="score-list-container">
-            <div class="score-view-item">
-                <h4>【 パート 1 - 大太鼓 】</h4>
-                <img src="score1.jpg" alt="楽譜1">
+            <div class="menu-title">お囃子の楽譜一覧</div>
+            <div class="score-list-container">
+                <div class="score-view-item">
+                    <h4>【 パート 1 - 大太鼓 】</h4>
+                    <img src="score1new.jpg" alt="楽譜1">
+                </div>
+                <div class="score-view-item">
+                    <h4>【 パート 2 - 前半 】</h4>
+                    <img src="score2new.jpg" alt="楽譜2">
+                </div>
+                <div class="score-view-item">
+                    <h4>【 パート 2 - 後半 】</h4>
+                    <img src="score2_back.jpg" alt="楽譜2後半">
+                </div>
+                <div class="score-view-item">
+                    <h4>【 パート 3 - 前半 】</h4>
+                    <img src="score3new.jpg" alt="楽譜3">
+                </div>
+                <div class="score-view-item">
+                    <h4>【 パート 3 - 後半 】</h4>
+                    <img src="score3_back.jpg" alt="楽譜3後半">
+                </div>
             </div>
-            <div class="score-view-item">
-                <h4>【 パート 2 - 前半 】</h4>
-                <img src="score2.jpg" alt="楽譜2">
-            </div>
-            <div class="score-view-item">
-                <h4>【 パート 2 - 後半 】</h4>
-                <img src="score2_back.jpg" alt="楽譜2後半">
-            </div>
-            <div class="score-view-item">
-                <h4>【 パート 3 - 前半 】</h4>
-                <img src="score3.jpg" alt="楽譜3">
-            </div>
-            <div class="score-view-item">
-                <h4>【 パート 3 - 後半 】</h4>
-                <img src="score3_back.jpg" alt="楽譜3後半">
-            </div>
+            <button class="menu-btn" style="background-color: #555; max-width: 400px; width: 100%;" onclick="closeScoreViewer()">タイトルメニューにもどる</button>
         </div>
-        <button class="menu-btn" style="background-color: #555; max-width: 400px; width: 100%;" onclick="closeScoreViewer()">タイトルメニューにもどる</button>
-    </div>
 
     <div id="difficultyScreen" class="screen-container" style="display: none;">
         <div class="menu-title">むずかしさをえらぶ</div>
@@ -612,20 +612,18 @@
             const imgEl = document.getElementById("score-view-img");
             const titleEl = document.getElementById("score-title");
             
-            const suffix = isBack ? "_back.jpg" : ".jpg";
+            // 後半なら _back.jpg、前半なら new.jpg にする
+            const suffix = isBack ? "_back.jpg" : "new.jpg";
             const sectionText = isBack ? "【後半】" : "【前半】";
-            
-            // ★現在の時刻（タイムスタンプ）を末尾につけて、毎回違うURLとして認識させる
-            const cacheBuster = "?t=" + new Date().getTime(); 
 
             if (partKey === 'p1') {
-                imgEl.src = "score1.jpg" + cacheBuster; // 例: score1.jpg?t=17182938...
+                imgEl.src = "score1" + suffix; // score1new.jpg または score1_back.jpg
                 titleEl.innerText = "楽譜 【P1 - 大太鼓】";
             } else if (partKey === 'p2') {
-                imgEl.src = "score2" + suffix + cacheBuster;
+                imgEl.src = "score2" + suffix; // score2new.jpg または score2_back.jpg
                 titleEl.innerText = `楽譜 【P2 - 芸・ほい(中) / 遊び】 ${sectionText}`;
             } else if (partKey === 'p3') {
-                imgEl.src = "score3" + suffix + cacheBuster;
+                imgEl.src = "score3" + suffix; // score3new.jpg または score3_back.jpg
                 titleEl.innerText = `楽譜 【P3 - 芸・ほい(外) / 終り】 ${sectionText}`;
             }
         }
