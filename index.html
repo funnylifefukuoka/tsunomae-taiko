@@ -614,15 +614,18 @@
             
             const suffix = isBack ? "_back.jpg" : ".jpg";
             const sectionText = isBack ? "【後半】" : "【前半】";
+            
+            // ★現在の時刻（タイムスタンプ）を末尾につけて、毎回違うURLとして認識させる
+            const cacheBuster = "?t=" + new Date().getTime(); 
 
             if (partKey === 'p1') {
-                imgEl.src = "score1.jpg";
+                imgEl.src = "score1.jpg" + cacheBuster; // 例: score1.jpg?t=17182938...
                 titleEl.innerText = "楽譜 【P1 - 大太鼓】";
             } else if (partKey === 'p2') {
-                imgEl.src = "score2" + suffix;
+                imgEl.src = "score2" + suffix + cacheBuster;
                 titleEl.innerText = `楽譜 【P2 - 芸・ほい(中) / 遊び】 ${sectionText}`;
             } else if (partKey === 'p3') {
-                imgEl.src = "score3" + suffix;
+                imgEl.src = "score3" + suffix + cacheBuster;
                 titleEl.innerText = `楽譜 【P3 - 芸・ほい(外) / 終り】 ${sectionText}`;
             }
         }
